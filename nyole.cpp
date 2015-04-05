@@ -13,7 +13,7 @@ extern int com_create_object( lua_State *L );
 extern int com_get_active_object( lua_State *L );
 extern int com_const_load( lua_State *L );
 
-extern "C" int luaopen_nyaole(lua_State *L)
+extern "C" int luaopen_nyole(lua_State *L)
 {
     DBG( puts("STEP-1") );
     lua_newtable(L);

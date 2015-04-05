@@ -1,4 +1,4 @@
-local ole = require('nyaole')
+local ole = require('nyole')
 local fsObj = ole.create_object("Scripting.FileSystemObject")
 local fd = fsObj:CreateTextFile("hogehoge",true)
 fd:WriteLine("This is a test.")

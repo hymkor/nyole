@@ -1,0 +1,5 @@
+local ole = require('nyaole')
+local fsObj = ole.create_object("Scripting.FileSystemObject")
+local fd = fsObj:CreateTextFile("hogehoge",true)
+fd:WriteLine("This is a test.")
+fd:Close()

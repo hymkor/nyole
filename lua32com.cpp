@@ -548,7 +548,7 @@ static int put__(lua_State *L)
     }
 }
 
-static void const_setter(void *L_,const char *name,VARIANT &value);
+static void const_setter(void *L_,const char *name,VARIANT &value,int enc);
 static int find_member(lua_State *L)
 {
     DBG( puts("[CALL] find_member") );
@@ -575,7 +575,7 @@ static int find_member(lua_State *L)
     }
     if( strcmp(member_name,"__const__")==0 ){
         lua_newtable(L);
-        (**u).const_load(L,const_setter,(**u).enc());
+        (**u).const_load(L,const_setter);
         return 1;
     }
     ActiveXMember *member=new ActiveXMember(**u,member_name);
@@ -688,7 +688,7 @@ int com_const_load(lua_State *L)
         return 2;
     }
     lua_newtable(L);
-    (**u).const_load(L,const_setter,(**u).enc());
+    (**u).const_load(L,const_setter);
     return 1;
 }
 
@@ -717,7 +717,7 @@ static int next_iterator(lua_State *L)
         return 2;
     }
     if( (**axi).nextObj() ){
-        variant2lua( (**axi).var() , L );
+        variant2lua( (**axi).var() , L , (**axi).enc() );
         DBG( puts("[leave] next_iterator (continue)") );
         return 1;
     }else{

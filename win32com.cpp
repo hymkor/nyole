@@ -118,7 +118,7 @@ ActiveXObject::ActiveXObject(const char *name,bool isNewInstance,int enc_)
 
 int ActiveXObject::const_load(
         void *L ,
-        void (*setter)(void *L,const char *,VARIANT &) , int enc)
+        void (*setter)(void *L,const char *,VARIANT &,int enc) )
 {
     ITypeInfo *pTypeInfo;
     LCID lcid = LOCALE_SYSTEM_DEFAULT;
@@ -161,10 +161,10 @@ int ActiveXObject::const_load(
                 if( FAILED(hr) || len==0 || bstr==0 )
                     continue;
                 
-                char *name=Unicode::b2c(bstr,enc);
+                char *name=Unicode::b2c(bstr,this->enc());
                 SysFreeString(bstr);
 
-                (*setter)(L , name , *pVarDesc->lpvarValue );
+                (*setter)(L , name , *pVarDesc->lpvarValue , this->enc());
 
                 delete[]name;
             }
@@ -303,10 +303,10 @@ VARIANT *Variants::add_anything()
 }
 
 ActiveXIterator::ActiveXIterator( ActiveXObject &parent )
+    : enc1( parent.enc() ) , status_(true)
 {
     DBG( puts("[Enter] new ActiveXIterator") );
     VariantInit( &var_ );
-    status_ = true;
 
     unsigned argErr;
 

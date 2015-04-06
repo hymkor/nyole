@@ -54,7 +54,7 @@ public:
             HRESULT *hr=0,
             char **error_info=0 
             );
-    int const_load(void *L,void (*setter)(void *,const char *,VARIANT &),int enc);
+    int const_load(void *L,void (*setter)(void *,const char *,VARIANT &,int enc));
 
     int ok() const { return pApplication != NULL ; }
     HRESULT construct_error() const { return construct_error_; }
@@ -82,6 +82,7 @@ class ActiveXIterator {
     IEnumVARIANT  *pEnumVariant_;
     VARIANT        var_;
     bool status_;
+    int  enc1;
 public:
     ActiveXIterator( ActiveXObject &parent );
     ~ActiveXIterator();
@@ -89,6 +90,7 @@ public:
     bool nextObj();
 
     VARIANT        &var(){ return var_; }
+    int enc() const { return this->enc1; }
 };
 
 #endif

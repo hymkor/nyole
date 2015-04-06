@@ -115,7 +115,8 @@ static void table2safearray(
         int maxdepth ,
         long *counter ,
         SAFEARRAYBOUND *bound ,
-        SAFEARRAY *array )
+        SAFEARRAY *array , 
+        int enc)
 {
     for(counter[depth]=0 ;
             counter[depth] < static_cast<long>(bound[depth].cElements) ;
@@ -130,7 +131,7 @@ static void table2safearray(
             case LUA_TSTRING:
                 DBG( puts("<STR>") );
                 var.vt      = VT_BSTR ;
-                var.bstrVal = Unicode::c2b( lua_tostring(L,-1) );
+                var.bstrVal = Unicode::c2b( lua_tostring(L,-1) , enc);
                 break;
             case LUA_TNUMBER:
                 DBG( puts("<NUM>") );
@@ -147,7 +148,7 @@ static void table2safearray(
         }else{
             if( lua_istable(L,-1) ){
                 DBG( puts("<TBL>") );
-                table2safearray(L,depth+1,maxdepth,counter,bound,array);
+                table2safearray(L,depth+1,maxdepth,counter,bound,array,enc);
             }else{
                 DBG( puts("<not TBL>") );
             }
@@ -156,7 +157,7 @@ static void table2safearray(
     }
 }
 
-static void lua2variants( lua_State *L , int i , Variants &args )
+static void lua2variants( lua_State *L , int i , Variants &args , int enc )
 {
     switch( lua_type(L,i) ){
     case LUA_TTABLE:
@@ -170,7 +171,7 @@ static void lua2variants( lua_State *L , int i , Variants &args )
             SAFEARRAY *array=SafeArrayCreate(VT_VARIANT,dim,bound);
 
             reset_safearray(0,dim-1,counter,bound,array);
-            table2safearray(L,0,dim-1,counter,bound,array);
+            table2safearray(L,0,dim-1,counter,bound,array,enc);
 
             VARIANT *pvar=args.add_anything();
             VariantInit(pvar);
@@ -192,7 +193,7 @@ static void lua2variants( lua_State *L , int i , Variants &args )
         {
             const char *s=lua_tostring(L,i);
             if( s != NULL )
-                args.add_as_string( s );
+                args.add_as_string( s , enc );
             else
                 args.add_as_null();
         }
@@ -215,7 +216,7 @@ static int put_property(lua_State *L)
         return 0;
     }
 
-    Variants args;  lua2variants(L,3,args);
+    Variants args;  lua2variants(L,3,args,(**u).enc());
     VARIANT result; VariantInit(&result);
 
     char *error_info=0;
@@ -266,7 +267,7 @@ static void push_activexobject(lua_State *L,ActiveXObject *obj)
     lua_setmetatable(L,-2);
 }
 
-static int variant2lua( VARIANT &v , lua_State *L );
+static int variant2lua( VARIANT &v , lua_State *L , int enc );
 static void safearray2table_sub(
         SAFEARRAY *safearray ,
         int depth ,
@@ -274,7 +275,8 @@ static void safearray2table_sub(
         long *counter ,
         long *start ,
         long *end ,
-        lua_State *L )
+        lua_State *L ,
+        int enc )
 {
     DBG( putchar('{') );
     lua_newtable(L);
@@ -291,17 +293,17 @@ static void safearray2table_sub(
             if( FAILED(hr) ){
                 lua_pushnil(L);
             }else{
-                variant2lua(*p,L);
+                variant2lua(*p,L,enc);
             }
         }else{
-            safearray2table_sub(safearray,depth+1,dim,counter,start,end,L);
+            safearray2table_sub(safearray,depth+1,dim,counter,start,end,L,enc);
         }
         lua_settable(L,-3);
     }
     DBG( puts("}") );
 }
 
-static void safearray2table( VARIANT &v , lua_State *L )
+static void safearray2table( VARIANT &v , lua_State *L , int enc)
 {
     SAFEARRAY *safearray = ( (v.vt & VT_BYREF) ? *v.pparray : v.parray );
     int dim = SafeArrayGetDim( safearray );
@@ -317,7 +319,7 @@ static void safearray2table( VARIANT &v , lua_State *L )
     if( FAILED(hr) ){
         goto exit;
     }
-    safearray2table_sub( safearray , 0 , dim , counter , start , end , L );
+    safearray2table_sub( safearray , 0 , dim , counter , start , end , L , enc);
     SafeArrayUnlock(safearray);
 exit:
     delete[]counter;
@@ -325,14 +327,14 @@ exit:
     delete[]end;
 }
 
-static int variant2lua( VARIANT &v , lua_State *L )
+static int variant2lua( VARIANT &v , lua_State *L , int enc)
 {
     if( v.vt == VT_BSTR ){
-        char *p=Unicode::b2c( v.bstrVal );
+        char *p=Unicode::b2c( v.bstrVal , enc );
         lua_pushstring(L,p);
         delete[]p;
     }else if( v.vt == (VT_BSTR|VT_BYREF) ){
-        char *p=Unicode::b2c( *v.pbstrVal );
+        char *p=Unicode::b2c( *v.pbstrVal , enc );
         lua_pushstring(L,p);
         delete[]p;
     }else if( v.vt == VT_DISPATCH ){
@@ -366,7 +368,7 @@ static int variant2lua( VARIANT &v , lua_State *L )
     }else if( v.vt == (VT_R8|VT_BYREF) ){
         lua_pushnumber(L,*v.pdblVal);
     }else if( (v.vt & VT_ARRAY) != 0 ){
-        safearray2table( v , L );
+        safearray2table( v , L , enc);
     }else{
         DBG( printf("vt=[%d]\n",v.vt) );
         lua_pushnil( L );
@@ -395,7 +397,7 @@ static int call_member(lua_State *L)
         return 2;
     }
     for(int i=lua_gettop(L);i>=3;--i){
-        lua2variants(L,i,args);
+        lua2variants(L,i,args,(**o).enc());
     }
     char *error_info=0;
     if( (**m).invoke( DISPATCH_METHOD | DISPATCH_PROPERTYGET ,
@@ -414,7 +416,7 @@ static int call_member(lua_State *L)
     }
     DBG( puts("invoke(DISPATCH_PROPERTYGET|DISPATCH_METHOD) succeded.") );
     delete[]error_info;
-    return variant2lua(result,L);
+    return variant2lua(result,L,(**o).enc());
 }
 
 static void push_activexmember(lua_State *L,ActiveXMember *member)
@@ -472,7 +474,7 @@ static int get__(lua_State *L)
 
     Variants args;
     for(int i=lua_gettop(L) ; i>=3 ; --i ){
-        lua2variants(L,i,args);
+        lua2variants(L,i,args,(**u).enc());
     }
     VARIANT result; VariantInit(&result);
 
@@ -488,7 +490,7 @@ static int get__(lua_State *L)
         return 2;
     }else{
         lua_pushboolean(L,1);
-        return variant2lua(result,L);
+        return variant2lua(result,L,(**u).enc());
     }
 }
 
@@ -526,8 +528,8 @@ static int put__(lua_State *L)
     }
 
     Variants args;
-    lua2variants(L,4,args);
-    lua2variants(L,3,args);
+    lua2variants(L,4,args,(**u).enc());
+    lua2variants(L,3,args,(**u).enc());
     VARIANT result; VariantInit(&result);
 
     char *error_info=0;
@@ -573,7 +575,7 @@ static int find_member(lua_State *L)
     }
     if( strcmp(member_name,"__const__")==0 ){
         lua_newtable(L);
-        (**u).const_load(L,const_setter);
+        (**u).const_load(L,const_setter,(**u).enc());
         return 1;
     }
     ActiveXMember *member=new ActiveXMember(**u,member_name);
@@ -620,7 +622,7 @@ static int find_member(lua_State *L)
     }else{
         DBG( printf("invoke('%s',DISPATCH_PROPERTYGET) success. hr==%0lX\n",
                     member_name,hr) );
-        rc=variant2lua( result , L );
+        rc=variant2lua( result , L , member->enc() );
         if( rc != 0 ){
             // member is property
             delete member;
@@ -637,11 +639,11 @@ static int find_member(lua_State *L)
     return rc;
 }
 
-static int new_activex_object(lua_State *L,bool isNewObject)
+static int new_activex_object(lua_State *L,bool isNewObject,int enc)
 {
     DBG( puts("[CALL] create_object") );
     const char *name=lua_tostring(L,1);
-    ActiveXObject *obj=new ActiveXObject(name,isNewObject);
+    ActiveXObject *obj=new ActiveXObject(name,isNewObject,enc);
     if( obj == NULL ){
         lua_pushnil(L);
         lua_pushstring(L,"Can not find ActiveXObject");
@@ -659,20 +661,20 @@ static int new_activex_object(lua_State *L,bool isNewObject)
 
 int com_create_object(lua_State *L)
 {
-    return new_activex_object(L,true);
+    return new_activex_object(L,true,CP_ACP);
 }
 
 int com_get_active_object(lua_State *L)
 {
-    return new_activex_object(L,false);
+    return new_activex_object(L,false,CP_ACP);
 }
 
-static void const_setter(void *L_,const char *name,VARIANT &value)
+static void const_setter(void *L_,const char *name,VARIANT &value,int enc)
 {
     lua_State *L=static_cast<lua_State*>(L_);
 
     lua_pushstring( L , name );
-    variant2lua( value , L );
+    variant2lua( value , L  , enc );
     lua_settable( L , -3 );
 }
 
@@ -686,7 +688,7 @@ int com_const_load(lua_State *L)
         return 2;
     }
     lua_newtable(L);
-    (**u).const_load(L,const_setter);
+    (**u).const_load(L,const_setter,(**u).enc());
     return 1;
 }
 

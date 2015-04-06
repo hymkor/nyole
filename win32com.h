@@ -5,16 +5,17 @@
 
 class Unicode {
     BSTR w;
+    int enc;
 public:
-    static BSTR  c2b(const char *s); // To free, SysFreeString(r);
-    static char *b2c(BSTR w); // To free, delete[]r;
+    static BSTR  c2b(const char *s,int enc_); // To free, SysFreeString(r);
+    static char *b2c(BSTR w,int enc_); // To free, delete[]r;
 
-    Unicode(const char *s) : w(c2b(s)){}
+    Unicode(const char *s,int enc_) : w(c2b(s,enc_)),enc(enc_){}
     ~Unicode(){ if(w){ SysFreeString(w); } }
 
     operator const BSTR &(){ return w; }
     BSTR *operator &(){ return &w; }
-    char *toChar(){ return b2c(w); } // To free, delete[]r;
+    char *toChar(){ return b2c(w,this->enc); } // To free, delete[]r;
 };
 
 class Variants {
@@ -26,7 +27,7 @@ public:
     ~Variants();
 
     operator VARIANTARG*(){ return v; }
-    void add_as_string( const char *s );
+    void add_as_string( const char *s , int enc);
     void add_as_number( double d );
     void add_as_boolean( int n );
     void add_as_null();
@@ -38,8 +39,10 @@ class ActiveXObject {
     static int instance_count;
     IDispatch *pApplication;
     HRESULT construct_error_;
+    int enc1;
 public:
-    explicit ActiveXObject(const char *name,bool isNewInstance=true);
+    int enc() const { return this->enc1; }
+    explicit ActiveXObject(const char *name,bool isNewInstance,int enc);
     explicit ActiveXObject(IDispatch *p) : pApplication(p) , construct_error_(NO_ERROR) { instance_count++; }
     ~ActiveXObject();
 
@@ -51,7 +54,7 @@ public:
             HRESULT *hr=0,
             char **error_info=0 
             );
-    int const_load(void *L,void (*setter)(void *,const char *,VARIANT &));
+    int const_load(void *L,void (*setter)(void *,const char *,VARIANT &),int enc);
 
     int ok() const { return pApplication != NULL ; }
     HRESULT construct_error() const { return construct_error_; }
@@ -63,7 +66,9 @@ class ActiveXMember {
     ActiveXObject &instance_;
     DISPID dispid_;
     HRESULT construct_error_;
+    int enc1;
 public:
+    int enc() const { return this->enc1; }
     ActiveXMember( ActiveXObject &instance , const char *name );
     DISPID dispid() const { return dispid_; }
     int invoke(WORD wflags,VARIANT *argv , int argc , VARIANT &result,HRESULT *hr=0,char **error_info=0 );

@@ -11,7 +11,7 @@
 #  define DBG(x)
 #endif
 
-BSTR Unicode::c2b(const char *s)
+BSTR Unicode::c2b(const char *s,int encoding_)
 {
     size_t csize=strlen(s);
     size_t wsize=MultiByteToWideChar(CP_ACP,MB_PRECOMPOSED,s,csize,NULL,0);
@@ -22,15 +22,16 @@ BSTR Unicode::c2b(const char *s)
 #endif
         return NULL;
     }
-    MultiByteToWideChar(CP_ACP,0,s,csize,w,wsize);
+    MultiByteToWideChar(encoding_,0,s,csize,w,wsize);
     return w;
 }
 
-char *Unicode::b2c(BSTR w)
+// encoding_ ... CP_ACP
+char *Unicode::b2c(BSTR w,int encoding_)
 {
-    size_t csize=WideCharToMultiByte(CP_ACP,0,(OLECHAR*)w,-1,NULL,0,NULL,NULL);
+    size_t csize=WideCharToMultiByte(encoding_,0,(OLECHAR*)w,-1,NULL,0,NULL,NULL);
     char *p=new char[ csize+1 ];
-    WideCharToMultiByte(CP_ACP,0,(OLECHAR*)w,-1,p,csize,NULL,NULL);
+    WideCharToMultiByte(encoding_,0,(OLECHAR*)w,-1,p,csize,NULL,NULL);
     return p;
 }
 
@@ -54,7 +55,8 @@ ActiveXObject::~ActiveXObject()
         OleUninitialize();
 }
 
-ActiveXObject::ActiveXObject(const char *name,bool isNewInstance)
+ActiveXObject::ActiveXObject(const char *name,bool isNewInstance,int enc_)
+    : enc1(enc_)
 {
     CLSID clsid;
 
@@ -64,7 +66,7 @@ ActiveXObject::ActiveXObject(const char *name,bool isNewInstance)
     if( instance_count++ <= 0 )
         OleInitialize(NULL);
 
-    Unicode className(name);
+    Unicode className(name,enc_);
 
     /* クラスID取得 */
     construct_error_ = CLSIDFromProgID( className , &clsid );
@@ -116,7 +118,7 @@ ActiveXObject::ActiveXObject(const char *name,bool isNewInstance)
 
 int ActiveXObject::const_load(
         void *L ,
-        void (*setter)(void *L,const char *,VARIANT &) )
+        void (*setter)(void *L,const char *,VARIANT &) , int enc)
 {
     ITypeInfo *pTypeInfo;
     LCID lcid = LOCALE_SYSTEM_DEFAULT;
@@ -159,7 +161,7 @@ int ActiveXObject::const_load(
                 if( FAILED(hr) || len==0 || bstr==0 )
                     continue;
                 
-                char *name=Unicode::b2c(bstr);
+                char *name=Unicode::b2c(bstr,enc);
                 SysFreeString(bstr);
 
                 (*setter)(L , name , *pVarDesc->lpvarValue );
@@ -174,10 +176,10 @@ int ActiveXObject::const_load(
     return 0;
 }
 
-
-ActiveXMember::ActiveXMember( ActiveXObject &instance , const char *name ) : instance_(instance)
+ActiveXMember::ActiveXMember( ActiveXObject &instance , const char *name )
+: instance_(instance) , enc1(instance.enc())
 {
-    Unicode methodName(name);
+    Unicode methodName(name,enc1);
 
     this->construct_error_ = instance.getIDispatch()->GetIDsOfNames(
             IID_NULL , /* 将来のための予約フィールド */
@@ -231,7 +233,7 @@ int ActiveXMember::invoke(
     int rc=0;
     if( FAILED(hr) ){
         if( hr == DISP_E_EXCEPTION && error_info != 0 ){
-            *error_info = Unicode::b2c( excepinfo.bstrDescription );
+            *error_info = Unicode::b2c( excepinfo.bstrDescription , enc() );
         }
         rc = -1;
     }
@@ -267,11 +269,11 @@ void Variants::grow()
     VariantInit( &v[size_-1] );
 }
 
-void Variants::add_as_string(const char *s)
+void Variants::add_as_string(const char *s,int enc)
 {
     grow();
     v[size_-1].vt = VT_BSTR;
-    v[size_-1].bstrVal = Unicode::c2b(s);
+    v[size_-1].bstrVal = Unicode::c2b(s,enc);
 }
 
 void Variants::add_as_number(double d)

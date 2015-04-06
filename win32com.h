@@ -8,6 +8,7 @@ class Unicode {
     int enc;
 public:
     static BSTR  c2b(const char *s,int enc_); // To free, SysFreeString(r);
+    static BSTR  c2b(const char *s,size_t csize,int enc);
     static char *b2c(BSTR w,int enc_); // To free, delete[]r;
 
     Unicode(const char *s,int enc_) : w(c2b(s,enc_)),enc(enc_){}
@@ -43,7 +44,7 @@ class ActiveXObject {
 public:
     int enc() const { return this->enc1; }
     explicit ActiveXObject(const char *name,bool isNewInstance,int enc);
-    explicit ActiveXObject(IDispatch *p) : pApplication(p) , construct_error_(NO_ERROR) { instance_count++; }
+    explicit ActiveXObject(IDispatch *p,int enc) : pApplication(p) , construct_error_(NO_ERROR),enc1(enc) { instance_count++; }
     ~ActiveXObject();
 
     int invoke(const char *name,

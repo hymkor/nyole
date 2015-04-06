@@ -1,6 +1,6 @@
 #include "win32com.h"
 
-//#define DEBUG
+#undef DEBUG
 
 #include <stdlib.h>
 
@@ -11,27 +11,30 @@
 #  define DBG(x)
 #endif
 
-BSTR Unicode::c2b(const char *s,int encoding_)
+BSTR Unicode::c2b(const char *s,int enc)
 {
+    DBG( printf("Unicode::c2b('%s',%d)\n",s,enc) );
+    DBG( printf("CP_ACP=%d , CP_UTF8=%d\n",CP_ACP,CP_UTF8) );
     size_t csize=strlen(s);
-    size_t wsize=MultiByteToWideChar(CP_ACP,MB_PRECOMPOSED,s,csize,NULL,0);
+    size_t wsize=MultiByteToWideChar(enc,0/*MB_PRECOMPOSED*/,s,csize+1,NULL,0);
+    DBG( printf("wsize=%d\n",wsize) );
     BSTR w=SysAllocStringLen(NULL,wsize );
     if( w == NULL ){
-#ifdef DEBUG
-        puts("memory allocation error");
-#endif
+        DBG( puts("memory allocation error") );
         return NULL;
     }
-    MultiByteToWideChar(encoding_,0,s,csize,w,wsize);
+    if( MultiByteToWideChar(enc,0/*MB_PRECOMPOSED*/,s,csize+1,w,wsize) == 0 ){
+        DBG( puts("Failed to MultiByteToWideChar") );
+        return NULL;
+    }
     return w;
 }
 
-// encoding_ ... CP_ACP
-char *Unicode::b2c(BSTR w,int encoding_)
+char *Unicode::b2c(BSTR w,int enc)
 {
-    size_t csize=WideCharToMultiByte(encoding_,0,(OLECHAR*)w,-1,NULL,0,NULL,NULL);
+    size_t csize=WideCharToMultiByte(enc,0,(OLECHAR*)w,-1,NULL,0,NULL,NULL);
     char *p=new char[ csize+1 ];
-    WideCharToMultiByte(encoding_,0,(OLECHAR*)w,-1,p,csize,NULL,NULL);
+    WideCharToMultiByte(enc,0,(OLECHAR*)w,-1,p,csize,NULL,NULL);
     return p;
 }
 

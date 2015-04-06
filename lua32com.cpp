@@ -338,10 +338,10 @@ static int variant2lua( VARIANT &v , lua_State *L , int enc)
         lua_pushstring(L,p);
         delete[]p;
     }else if( v.vt == VT_DISPATCH ){
-        ActiveXObject *o=new ActiveXObject( v.pdispVal );
+        ActiveXObject *o=new ActiveXObject( v.pdispVal , enc);
         push_activexobject(L,o);
     }else if( v.vt == (VT_DISPATCH|VT_BYREF) ){
-        ActiveXObject *o=new ActiveXObject( *v.ppdispVal );
+        ActiveXObject *o=new ActiveXObject( *v.ppdispVal , enc );
         push_activexobject(L,o);
     }else if( v.vt == VT_BOOL ){
         lua_pushboolean(L,v.boolVal);
@@ -664,10 +664,21 @@ int com_create_object(lua_State *L)
     return new_activex_object(L,true,CP_ACP);
 }
 
+int com_create_object_utf8(lua_State *L)
+{
+    return new_activex_object(L,true,CP_UTF8);
+}
+
 int com_get_active_object(lua_State *L)
 {
     return new_activex_object(L,false,CP_ACP);
 }
+
+int com_get_active_object_utf8(lua_State *L)
+{
+    return new_activex_object(L,false,CP_UTF8);
+}
+
 
 static void const_setter(void *L_,const char *name,VARIANT &value,int enc)
 {

@@ -14,5 +14,6 @@ Required Software to build
 - [Lua 5.3](http://www.lua.org/)
 - [tdm-cc](http://tdm-gcc.tdragon.net/)
 
-To build:
+### To build:
+
     mingw32-make LUA53=(PATH\TO\LUA-5.3.0)

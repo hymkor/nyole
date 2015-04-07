@@ -1,10 +1,12 @@
+# Makefile for nmake
+
 TARGET=nyole.dll 
-ifndef LUA53
+! ifndef LUA53
 LUA53=lua-5.3.0
-endif
+! endif
 
 $(TARGET): nyole.o lua32com.o win32com.o nyole.def nyole.syso
-	g++ -shared -o $@ $^ -s -lole32 -loleaut32 -luuid -llua53 -L. -L$(LUA53)\src
+	g++ -shared -o $@ $** -s -lole32 -loleaut32 -luuid -llua53 -L. -L$(LUA53)\src
 
 nyole.o : nyole.cpp
 lua32com.o : lua32com.cpp

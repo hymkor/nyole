@@ -8,6 +8,9 @@ Sample
     local objShell = ole.create_object("WScript.Shell")
     print(objShell.SpecialFolders("Desktop"):Item(0))
 
+- `create_object` is the function for ANSI-String on the current codepage.
+- For utf8, use `create_object_utf8`
+
 Required Software to build
 --------------------------
 

@@ -12,8 +12,11 @@ extern "C" {
 
 #include "win32com.h"
 
-//#define DBG(x) (x)
-#define DBG(x)
+#ifdef DEBUG
+#  define DBG(x) (x)
+#else
+#  define DBG(x)
+#endif
 
 static void hr_to_lua_message(HRESULT hr,lua_State *L)
 {
@@ -48,7 +51,13 @@ static int destroy_object(lua_State *L)
     DBG( puts("[CALL] destroy_object") );
     ActiveXObject **u=static_cast<ActiveXObject**>(
             luaL_checkudata(L,1,"ActiveXObject") );
-    delete *u;
+    if( u != NULL && *u != NULL ){
+        DBG( printf("try delete (ActiveXObject*)%p\n",*u) );
+        delete *u;
+        DBG( printf("done(%p=NULL)\n",*u) );
+        *u = NULL;
+    }
+    DBG( puts("[LEAVE] destroy_object") );
     return 0;
 }
 
@@ -247,11 +256,16 @@ static int find_member(lua_State *L);
 static int make_iterator(lua_State *L);
 static int make_iterator_from_member(lua_State *L);
 
+// move activexobject's ownership to lua stack
 static void push_activexobject(lua_State *L,ActiveXObject *obj)
 {
     ActiveXObject **u=
         static_cast<ActiveXObject**>(
                 lua_newuserdata( L, sizeof(ActiveXObject*) ));
+    if( u == 0 ){
+        DBG(puts("push_activexobject failed at lua_newuserdata"));
+        abort();
+    }
     *u = obj;
     luaL_newmetatable(L,"ActiveXObject");
     lua_pushcfunction(L,destroy_object);
@@ -338,9 +352,11 @@ static int variant2lua( VARIANT &v , lua_State *L , int enc)
         lua_pushstring(L,p);
         delete[]p;
     }else if( v.vt == VT_DISPATCH ){
+        DBG( puts("(variant2lua) push ActiveXObject(1)") );
         ActiveXObject *o=new ActiveXObject( v.pdispVal , enc);
         push_activexobject(L,o);
     }else if( v.vt == (VT_DISPATCH|VT_BYREF) ){
+        DBG( puts("(variant2lua) push ActiveXObject(2)") );
         ActiveXObject *o=new ActiveXObject( *v.ppdispVal , enc );
         push_activexobject(L,o);
     }else if( v.vt == VT_BOOL ){
@@ -705,14 +721,24 @@ int com_const_load(lua_State *L)
 
 static int destroy_iterator(lua_State *L)
 {
+    DBG( puts("Enter destroy_iterator") );
     ActiveXIterator **axi=static_cast<ActiveXIterator**>(
         luaL_checkudata(L,1,"ActiveXIterator") );
-    if( axi == NULL ){
+    if( axi == 0 ){
+        DBG( puts("Errored destroy_iterator case.1") );
         lua_pushnil(L);
-        lua_pushstring(L,"Invalid ActiveXIterator");
+        lua_pushstring(L,"Invalid ActiveXIterator(Case.1)");
         return 2;
     }
+    if( *axi == 0 ){
+        DBG( puts("Errored destroy_iterator case.2") );
+        lua_pushnil(L);
+        lua_pushstring(L,"Invalid ActiveXIterator(Case.2)");
+        return 2;
+    }
+    DBG( puts("delete ActiveXIterator") );
     delete (*axi);
+    *axi = 0;
     return 0;
 }
 
@@ -721,7 +747,7 @@ static int next_iterator(lua_State *L)
     DBG( puts("[Enter] next_iterator") );
     ActiveXIterator **axi=static_cast<ActiveXIterator**>(
         luaL_checkudata(L,1,"ActiveXIterator") );
-    if( axi == NULL ){
+    if( axi == NULL || *axi == NULL ){
         lua_pushnil(L);
         lua_pushstring(L,"Invalid ActiveXIterator");
         DBG( puts("[leave] next_iterator (failure)") );

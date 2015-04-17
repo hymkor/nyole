@@ -39,12 +39,13 @@ public:
 class ActiveXObject {
     static int instance_count;
     IDispatch *pApplication;
+    IDispatch *toFree;
     HRESULT construct_error_;
     int enc1;
 public:
     int enc() const { return this->enc1; }
     explicit ActiveXObject(const char *name,bool isNewInstance,int enc);
-    explicit ActiveXObject(IDispatch *p,int enc) : pApplication(p) , construct_error_(NO_ERROR),enc1(enc) { instance_count++; }
+    explicit ActiveXObject(IDispatch *p,int enc);
     ~ActiveXObject();
 
     int invoke(const char *name,

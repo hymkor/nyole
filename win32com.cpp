@@ -1,7 +1,5 @@
 #include "win32com.h"
 
-#undef DEBUG
-
 #include <stdlib.h>
 
 #ifdef DEBUG
@@ -52,19 +50,34 @@ int ActiveXObject::instance_count = 0;
 
 ActiveXObject::~ActiveXObject()
 {
-    if( pApplication != NULL )
-        pApplication->Release();
-    if( --instance_count <= 0 )
+    DBG( puts("[CALL] ActiveXObject::~ActiveXObject") );
+    if( this->toFree != 0 ){
+        DBG(puts("ActiveXObject::~ActiveXObject(): Release()"));
+        this->toFree->Release();
+        DBG(puts("ActiveXObject::~ActiveXObject(): =NULL"));
+        this->toFree = 0;
+    }
+    /*
+    if( --instance_count <= 0 ){
+        DBG(puts("ActiveXObject::~ActiveXObject(): OleUninitialize"));
         OleUninitialize();
+    }
+    */
+    DBG( puts("[LEAVE] ActiveXObject::~ActiveXObject") );
+}
+
+ActiveXObject::ActiveXObject(IDispatch *p,int enc)
+    : pApplication(p),toFree(0) , construct_error_(NO_ERROR),enc1(enc)
+{
+    DBG( printf("new ActiveXObject %p (annonyous)\n",this) );
+    instance_count++;
 }
 
 ActiveXObject::ActiveXObject(const char *name,bool isNewInstance,int enc_)
-    : enc1(enc_)
+    : pApplication(0) , construct_error_(NO_ERROR),enc1(enc_)
 {
+    DBG( printf("new ActiveXObject %p (%s)\n",this,name) );
     CLSID clsid;
-
-    this->pApplication = NULL;
-    construct_error_ = 0;
 
     if( instance_count++ <= 0 )
         OleInitialize(NULL);
@@ -117,6 +130,7 @@ ActiveXObject::ActiveXObject(const char *name,bool isNewInstance,int enc_)
             }
         }
     }
+    this->toFree = pApplication;
 }
 
 int ActiveXObject::const_load(
@@ -309,7 +323,7 @@ ActiveXIterator::ActiveXIterator( ActiveXObject &parent )
     : enc1( parent.enc() ) , status_(true)
 {
     DBG( puts("[Enter] new ActiveXIterator") );
-    VariantInit( &var_ );
+    VariantInit( &this->var_ );
 
     unsigned argErr;
 
@@ -345,21 +359,23 @@ ActiveXIterator::ActiveXIterator( ActiveXObject &parent )
             status_ = false;
         }
     }
-    VariantClear( &var_ );
-    VariantInit( &var_ );
+    VariantClear( &this->var_ );
+    VariantInit( &this->var_ );
     DBG( puts("[Leave] new ActiveXIterator") );
 }
 
 ActiveXIterator::~ActiveXIterator()
 {
-    if( pEnumVariant_ != NULL )
+    if( pEnumVariant_ != 0 ){
         pEnumVariant_->Release();
+        pEnumVariant_ = 0;
+    }
 }
 
 bool ActiveXIterator::nextObj()
 {
     DBG( puts("[Enter] ActiveXIterator::nextObj") );
-    if( ! ok() ){
+    if( ! ok() || pEnumVariant_ == 0 ){
         DBG( puts("[Leave] ActiveXIterator::nextObj ( !ok() )") );
         return false;
     }

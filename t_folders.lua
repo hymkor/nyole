@@ -1,17 +1,9 @@
-
 local ole=require('nyole')
 local fsObj=ole.create_object('Scripting.FileSystemObject')
 local folder=fsObj:GetFolder('.')
-local f=folder:files()
+local files=folder:files()
 
-for val in pairs(f) do
+for val in files:__iter__() do
     print(val.name)
 end
 print("done")
-
---[[
-for i=0,f.Count do
-    local file=f:Item(i)
-    print(file:Name())
-end
-]]--

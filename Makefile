@@ -20,5 +20,8 @@ nyole.syso : nyole.rc
 clean :
 	rm *.o $(TARGET)
 
+status:
+	lua showver.lua nyole.dll
+
 package :
 	for /F %%I in ('lua showver.lua $(TARGET)') do zip -9 nyole-%%I.zip $(TARGET) readme.md *.lua

@@ -189,7 +189,12 @@ static void lua2variants( lua_State *L , int i , Variants &args , int enc )
         }
         break;
     case LUA_TNUMBER:
-        args.add_as_number( lua_tonumber(L,i) );
+        //*** lua has no lua_isinteger. Why? ***
+        // if( lua_isinteger(L,i) ){
+            args.add_as_integer( lua_tointeger(L,i) );
+        // }else{
+        //    args.add_as_number( lua_tonumber(L,i) );
+        // }
         break;
     case LUA_TBOOLEAN:
         args.add_as_boolean( lua_toboolean(L,i) );

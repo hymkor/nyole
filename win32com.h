@@ -30,6 +30,7 @@ public:
     operator VARIANTARG*(){ return v; }
     void add_as_string( const char *s , int enc);
     void add_as_number( double d );
+    void add_as_integer( int n );
     void add_as_boolean( int n );
     void add_as_null();
     VARIANT *add_anything();

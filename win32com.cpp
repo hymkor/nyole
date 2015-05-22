@@ -300,6 +300,13 @@ void Variants::add_as_number(double d)
     v[size_-1].dblVal = d;
 }
 
+void Variants::add_as_integer(int n)
+{
+    grow();
+    v[size_-1].vt = VT_I4;
+    v[size_-1].lVal = n;
+}
+
 void Variants::add_as_boolean(int n)
 {
     grow();

@@ -29,7 +29,7 @@ Required Software to build
 --------------------------
 
 - [Lua 5.3](http://www.lua.org/)
-- [tdm-cc](http://tdm-gcc.tdragon.net/)
+- [tdm-gcc](http://tdm-gcc.tdragon.net/)
 
 ### To build:
 

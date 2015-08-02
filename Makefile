@@ -12,7 +12,7 @@ nyole.syso : nyole.rc
 	windres.exe --output-format=coff -o nyole.syso nyole.rc
 
 .cpp.o :
-	g++ -c $< -I$(LUA53)\src -o $@
+	g++ -c $< -I.\include -I$(LUA53)\src -o $@
 
 clean :
 	cmd.exe /c "del *.o $(TARGET)"
@@ -22,3 +22,6 @@ status:
 
 package :
 	for /F %%I in ('lua showver.lua $(TARGET)') do zip -9 nyole-%%I.zip $(TARGET) readme.md *.lua
+
+test:
+	lua showver.lua "$(TARGET)"

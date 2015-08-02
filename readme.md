@@ -28,9 +28,12 @@ Sample
 Required Software to build
 --------------------------
 
-- [Lua 5.3](http://www.lua.org/)
+- [LuaBinaries 5.3](http://luabinaries.sourceforge.net/)
 - [tdm-gcc](http://tdm-gcc.tdragon.net/)
 
 ### To build:
 
-    mingw32-make LUA53=(PATH\TO\LUA-5.3.0)
+    git clone https://github.com/zetamatta/nyole.git nyole
+    cd nyole
+    unzip PATH\TO\lua-5.3_Win??_dllw4_lib.zip
+    make

@@ -21,7 +21,7 @@ status:
 	lua showver.lua nyole.dll
 
 package :
-	for /F %%I in ('lua showver.lua $(TARGET)') do zip -9 nyole-%%I.zip $(TARGET) readme.md *.lua
+	for /F %%I in ('cscript //nologo showver.js $(TARGET)') do zip -9 nyole-%%I.zip $(TARGET) readme.md *.lua
 
 test:
 	lua showver.lua "$(TARGET)"
